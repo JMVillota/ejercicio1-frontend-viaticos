@@ -22,12 +22,12 @@ export class AppMenu {
         this.model = [
             {
                 label: 'Home',
-                items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/'] }]
+                items: [{ label: 'Inicio', icon: 'pi pi-fw pi-home', routerLink: ['/'] }]
             },
             {
-                label: 'UI Components',
+                label: 'Menu',
                 items: [
-                    { label: 'Viaticos', icon: 'pi pi-fw pi-table', routerLink: ['/uikit/viaticos'] },
+                    { label: 'Viaticos', icon: 'pi pi-fw pi-table', routerLink: ['/viaticos/viaticos'] },
 
                 ]
             },

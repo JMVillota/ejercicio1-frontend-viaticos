@@ -55,7 +55,7 @@ export class RevenueStreamWidget {
     chartData: any;
     chartOptions: any;
     subscription!: Subscription;
-    selectedYear: Date = new Date(2024, 0, 1); // Inicializa en 2024
+    selectedYear: Date = new Date(2024, 0, 1);
 
     constructor(
         public layoutService: LayoutService,

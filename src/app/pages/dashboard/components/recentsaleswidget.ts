@@ -6,9 +6,13 @@ import { CommonModule } from '@angular/common';
 import { InputTextModule } from 'primeng/inputtext';
 import { FormsModule } from '@angular/forms';
 import { ViaticosService } from '../../../service/viaticos.service';
+import { DocumentoViaticoService } from '../../../service/documento-viatico.service';
 import { Viatico } from '../../../interfaces/viatico.interface';
+import { DocumentoViatico } from '../../../interfaces/viatico.interface';
 import { ToastModule } from 'primeng/toast';
+import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 @Component({
     standalone: true,
@@ -20,7 +24,9 @@ import { MessageService } from 'primeng/api';
         RippleModule, 
         InputTextModule,
         FormsModule,
-        ToastModule
+        ToastModule,
+        DialogModule,
+        ProgressSpinnerModule
     ],
     template: `
     <div class="card !mb-8">
@@ -39,7 +45,8 @@ import { MessageService } from 'primeng/api';
             </div>
         </div>
 
-        <p-table [value]="viaticos" [paginator]="true" [rows]="5" responsiveLayout="scroll">
+        <p-table [value]="viaticos" [paginator]="true" [rows]="5" responsiveLayout="scroll"
+                 [showCurrentPageReport]="true" currentPageReportTemplate="{first} a {last} de {totalRecords} registros">
             <ng-template pTemplate="header">
                 <tr>
                     <th>ID</th>
@@ -68,13 +75,61 @@ import { MessageService } from 'primeng/api';
                     <td style="width: 10%">
                         <button pButton pRipple type="button" 
                                 icon="pi pi-eye" 
+                                (click)="showDocuments(viatico.id)"
                                 class="p-button p-component p-button-text p-button-icon-only">
                         </button>
                     </td>
                 </tr>
             </ng-template>
+
         </p-table>
     </div>
+
+    <p-dialog 
+        [(visible)]="displayDocumentDialog" 
+        [header]="'Documentos del Viático ' + selectedViaticoId"
+        [modal]="true"
+        [style]="{width: '450px'}"
+        [draggable]="false"
+        [resizable]="false">
+        
+        <div class="document-content p-3">
+            <div *ngIf="loading" class="flex justify-content-center py-3">
+                <p-progressSpinner strokeWidth="4"></p-progressSpinner>
+            </div>
+            <div *ngIf="!loading && documentos && documentos.length > 0">
+                <div *ngFor="let doc of documentos" class="mb-2">
+                    <div class="text-600 text-sm mb-2">
+                        ID: {{doc.id}} | {{doc.fechaCarga | date:'dd/MM/yyyy HH:mm'}}
+                    </div>
+                    <div class="flex align-items-start gap-2">
+                        <i class="pi pi-file-pdf text-xl text-600 mt-1"></i>
+                        <div class="flex-grow-1">
+                            <div class="font-medium">{{doc.nombreZip}}</div>
+                            <div class="text-sm text-500">{{doc.numeroArchivosPdf}} archivos adjuntos</div>
+                            <div class="text-sm text-500">{{doc.rutaArchivo}}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div *ngIf="!loading && (!documentos || documentos.length === 0)" 
+                class="flex flex-column align-items-center py-3">
+                <i class="pi pi-file text-xl text-500 mb-2"></i>
+                <span class="text-600">Sin documentos adjuntos</span>
+            </div>
+        </div>
+
+        <ng-template pTemplate="footer">
+            <button pButton pRipple type="button" 
+                    label="Cerrar"
+                    (click)="displayDocumentDialog = false"
+                    class="p-button-text p-button-secondary"
+                    style="color: #9C27B0;">
+            </button>
+        </ng-template>
+    </p-dialog>
+
     <p-toast></p-toast>`,
     styles: [`
         .search-container {
@@ -149,21 +204,84 @@ import { MessageService } from 'primeng/api';
             background-color: #ffe6e6;
             color: #cc3300;
         }
+
+        .document-dialog-content {
+            min-height: 300px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        :host ::ng-deep {
+            .p-dialog {
+                .p-dialog-header {
+                    padding: 1rem 1.5rem;
+                    border-bottom: 1px solid var(--surface-200);
+                }
+                
+                .p-dialog-content {
+                    padding: 0;
+                }
+                
+                .p-dialog-footer {
+                    padding: 0.75rem 1.25rem;
+                    border-top: 1px solid var(--surface-200);
+                }
+            }
+        }
+
+        .document-content {
+            min-height: 100px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .surface-hover {
+            transition: background-color 0.2s;
+            border: 1px solid #dee2e6;
+        }
+
+        .surface-hover:hover {
+            background-color: var(--surface-100);
+        }
     `],
     providers: [MessageService]
 })
 export class RecentSalesWidget implements OnInit {
     searchTerm: string = '';
     viaticos: Viatico[] = [];
+    displayDocumentDialog: boolean = false;
+    selectedViaticoId: string = '';
+    documentos: DocumentoViatico[] = [];
+    loading: boolean = false;
+    error: string | null = null;
  
     constructor(
         private viaticosService: ViaticosService,
+        private documentoService: DocumentoViaticoService,
         private messageService: MessageService
     ) {}
  
     ngOnInit() {
-        // Cargar datos iniciales vacíos
         this.viaticos = [];
+    }
+
+    showDocuments(viaticoId: string) {
+        this.selectedViaticoId = viaticoId;
+        this.displayDocumentDialog = true;
+        this.loading = true;
+        this.error = null;
+        this.documentos = [];
+
+        this.documentoService.getDocumentosByViaticoId(viaticoId).subscribe({
+            next: (docs) => {
+                this.documentos = docs;
+                this.loading = false;
+            },
+            error: (err) => {
+                this.error = 'No se pudieron cargar los documentos. Por favor, intente nuevamente.';
+                this.loading = false;
+                console.error('Error loading documents:', err);
+            }
+        });
     }
  
     search() {
@@ -176,7 +294,6 @@ export class RecentSalesWidget implements OnInit {
             return;
         }
  
-        // Si es un ID de viático (formato v-XXX)
         if (this.searchTerm.match(/^v-\d+$/)) {
             this.viaticosService.getViaticoById(this.searchTerm).subscribe({
                 next: (response) => {
@@ -207,7 +324,6 @@ export class RecentSalesWidget implements OnInit {
                 }
             });
         } else {
-            // Si es un número de identificación
             this.viaticosService.getViaticosByIdentificacion(this.searchTerm).subscribe({
                 next: (response) => {
                     if (response && response.length > 0) {
@@ -222,31 +338,28 @@ export class RecentSalesWidget implements OnInit {
                         this.messageService.add({
                             severity: 'info',
                             summary: 'Información',
-                            detail: 'No se encontraron viáticos para esta identificación'
+                            detail: 'No se encontraron viáticos para esta identificación'});
+                        }
+                    },
+                    error: (error) => {
+                        console.error('Error al buscar viáticos:', error);
+                        this.messageService.add({
+                            severity: 'error',
+                            summary: 'Error',
+                            detail: 'Error al buscar viáticos'
                         });
+                        this.viaticos = [];
                     }
-                },
-                error: (error) => {
-                    console.error('Error al buscar viáticos:', error);
-                    this.messageService.add({
-                        severity: 'error',
-                        summary: 'Error',
-                        detail: 'Error al buscar viáticos'
-                    });
-                    this.viaticos = [];
-                }
-            });
+                });
+            }
+        }
+        
+        clearSearch() {
+            this.searchTerm = '';
+            this.viaticos = [];
+        }
+     
+        getStatusClass(estado: string): string {
+            return 'status-' + estado.toLowerCase();
         }
     }
- 
-    // Método para limpiar la búsqueda
-    clearSearch() {
-        this.searchTerm = '';
-        this.viaticos = [];
-    }
- 
-    // Método para dar formato al estado
-    getStatusClass(estado: string): string {
-        return 'status-' + estado.toLowerCase();
-    }
- }

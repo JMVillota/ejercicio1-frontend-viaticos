@@ -18,6 +18,7 @@ export interface CreateViaticoRequest {
 
 export interface DocumentoViatico {
     id: string;
+    viaticoId: string;
     nombreZip: string;
     rutaArchivo: string;
     numeroArchivosPdf: number;

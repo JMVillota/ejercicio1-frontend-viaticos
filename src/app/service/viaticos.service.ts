@@ -4,8 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { 
     Viatico, 
-    CreateViaticoRequest, 
-    DocumentoViatico, 
+    CreateViaticoRequest,  
     ApiResponse,
     DashboardMetrics,
     GraficaData

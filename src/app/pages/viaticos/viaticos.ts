@@ -7,7 +7,7 @@ import { ToastModule } from 'primeng/toast';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormsModule, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
 import { ViaticosService } from '../../service/viaticos.service';
-import { Viatico } from '../../interfaces/viatico.interface';
+import { DocumentoViatico, Viatico } from '../../interfaces/viatico.interface';
 import { FileUploadModule } from 'primeng/fileupload';
 import { MessageService } from 'primeng/api';
 import { DialogModule } from 'primeng/dialog';
@@ -18,6 +18,7 @@ import { DividerModule } from 'primeng/divider';
 import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { DocumentoViaticoService } from '../../service/documento-viatico.service';
 
 @Component({
     selector: 'app-viaticos-table',
@@ -234,7 +235,6 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
         </div>
     </div>
 
-    <!-- Columna 2: Información del Viaje -->
     <div class="flex-1">
         <div class="card surface-card border-1 border-round-lg p-4">
             <h3 class="text-lg font-medium pb-3 border-bottom-1 surface-border mb-4">
@@ -243,7 +243,6 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
             </h3>
 
             <div class="grid">
-                <!-- Fila para Fecha Registro -->
                 <div class="col-12 mb-3">
                     <label class="block font-medium mb-2">Fecha de Registro</label>
                     <p-calendar 
@@ -258,7 +257,6 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
                     </p-calendar>
                 </div>
 
-                <!-- Fila para Fecha Inicio -->
                 <div class="col-12 mb-3">
                     <label class="block font-medium mb-2">Fecha Inicio Viaje</label>
                     <p-calendar 
@@ -271,7 +269,6 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
                     </p-calendar>
                 </div>
 
-                <!-- Fila para Fecha Fin -->
                 <div class="col-12">
                     <label class="block font-medium mb-2">Fecha Fin Viaje</label>
                     <p-calendar 
@@ -287,7 +284,6 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
         </div>
     </div>
 
-    <!-- Columna 3: Detalles Adicionales -->
     <div class="flex-1">
         <div class="card surface-card border-1 border-round-lg p-4">
             <h3 class="text-lg font-medium pb-3 border-bottom-1 surface-border mb-4">
@@ -296,7 +292,6 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
             </h3>
 
             <div class="grid">
-                <!-- Fila para Cliente/Proyecto -->
                 <div class="col-12 mb-3">
                     <label class="block font-medium mb-2">Cliente/Proyecto</label>
                     <div class="p-input-icon-left w-full">
@@ -308,7 +303,6 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
                     </div>
                 </div>
 
-                <!-- Fila para Motivo -->
                 <div class="col-12">
                     <label class="block font-medium mb-2">Motivo del Viaje</label>
                     <textarea 
@@ -371,7 +365,6 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
             Solo archivos ZIP hasta 10MB
         </small>
 
-        <!-- Información del archivo seleccionado -->
         <div *ngIf="selectedFile" class="mt-4 p-4 surface-card border-round">
             <div class="flex align-items-center mb-3">
                 <i class="pi pi-file-export text-primary mr-2"></i>
@@ -403,6 +396,52 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
         </div>
     </ng-template>
 </p-dialog>
+<p-dialog 
+    [(visible)]="displayDocumentDialog" 
+    [header]="'Documentos del Viático ' + selectedViaticoId"
+    [modal]="true"
+    [style]="{width: '450px'}"
+    [draggable]="false"
+    [resizable]="false">
+    
+    <div class="document-content p-3">
+        <div *ngIf="loadingDocumentos" class="flex justify-content-center py-3">
+            <p-progressSpinner strokeWidth="4"></p-progressSpinner>
+        </div>
+
+        <div *ngIf="!loadingDocumentos && documentos && documentos.length > 0">
+            <div *ngFor="let doc of documentos" class="mb-2">
+                <div class="text-600 text-sm mb-2">
+                    ID: {{doc.id}} | {{doc.fechaCarga | date:'dd/MM/yyyy HH:mm'}}
+                </div>
+                
+                <div class="flex align-items-start gap-2">
+                    <i class="pi pi-file-pdf text-xl text-600 mt-1"></i>
+                    <div class="flex-grow-1">
+                        <div class="font-medium">{{doc.nombreZip}}</div>
+                        <div class="text-sm text-500">{{doc.numeroArchivosPdf}} archivos adjuntos</div>
+                        <div class="text-sm text-500">{{doc.rutaArchivo}}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div *ngIf="!loadingDocumentos && (!documentos || documentos.length === 0)" 
+             class="flex flex-column align-items-center py-3">
+            <i class="pi pi-file text-xl text-500 mb-2"></i>
+            <span class="text-600">Sin documentos adjuntos</span>
+        </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <button pButton type="button" 
+                label="Cerrar"
+                (click)="displayDocumentDialog = false"
+                class="p-button-text p-button-secondary"
+                style="color: #9C27B0;">
+        </button>
+    </ng-template>
+</p-dialog>
     `
 })
 export class ViaticosTableComponent implements OnInit {
@@ -416,13 +455,17 @@ export class ViaticosTableComponent implements OnInit {
     minDate: Date;
     selectedFile: File | null = null;
     archivosPDF: number = 0;
+    displayDocumentDialog: boolean = false;
+    selectedViaticoId: string = '';
+    documentos: DocumentoViatico[] = [];
+    loadingDocumentos: boolean = false;
 
     constructor(
         private viaticosService: ViaticosService,
+        private documentoService: DocumentoViaticoService,
         private messageService: MessageService,
         private fb: FormBuilder
     ) {
-        // Calcular fecha mínima (90 días atrás)
         this.minDate = new Date();
         this.minDate.setDate(this.minDate.getDate() - 90);
 
@@ -529,7 +572,6 @@ export class ViaticosTableComponent implements OnInit {
             this.loading = true;
             const formData = this.viaticoForm.value;
 
-            // Asegurar formato de fechas correcto
             formData.fechaRegistro = new Date(formData.fechaRegistro).toISOString().split('T')[0];
             formData.fechaInicioViaje = new Date(formData.fechaInicioViaje).toISOString().split('T')[0];
             formData.fechaFinViaje = new Date(formData.fechaFinViaje).toISOString().split('T')[0];
@@ -571,7 +613,6 @@ export class ViaticosTableComponent implements OnInit {
         
         this.selectedFile = file;
         
-        // Usar JSZip para leer el contenido del ZIP
         try {
           const JSZip = (await import('jszip')).default;
           const zip = new JSZip();
@@ -620,15 +661,19 @@ export class ViaticosTableComponent implements OnInit {
     }
 
     verDetalles(viatico: Viatico) {
-        this.viaticosService.getViaticoById(viatico.id)
-            .subscribe({
-                next: (data) => {
-                    // Implementar lógica para mostrar detalles
-                    console.log('Detalles del viático:', data);
-                },
-                error: (error) => {
-                    this.mostrarError('Error al cargar los detalles del viático');
-                }
-            });
+        this.selectedViaticoId = viatico.id;
+        this.loadingDocumentos = true;
+        this.displayDocumentDialog = true;
+        
+        this.documentoService.getDocumentosByViaticoId(viatico.id).subscribe({
+            next: (docs) => {
+                this.documentos = docs;
+                this.loadingDocumentos = false;
+            },
+            error: (err) => {
+                this.loadingDocumentos = false;
+                this.mostrarError('Error al cargar los documentos');
+            }
+        });
     }
 }
