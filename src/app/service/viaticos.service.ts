@@ -1,6 +1,5 @@
-// src/app/services/viaticos.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { 
@@ -20,46 +19,64 @@ export class ViaticosService {
 
     constructor(private http: HttpClient) { }
 
+    // Función auxiliar para crear los headers de autenticación
+    private getAuthHeaders(): HttpHeaders {
+        const credentials = btoa(`${environment.basicAuth.username}:${environment.basicAuth.password}`);
+        return new HttpHeaders()
+            .set('Authorization', `Basic ${credentials}`);
+    }
+
     getDashboardMetrics(): Observable<DashboardMetrics> {
-        return this.http.get<DashboardMetrics>(`${this.apiUrl}/metricas`);
+        return this.http.get<DashboardMetrics>(
+            `${this.apiUrl}/metricas`,
+            { headers: this.getAuthHeaders() }
+        );
     }
 
-    // Obtener todos los viáticos
     getAllViaticos(): Observable<Viatico[]> {
-        return this.http.get<Viatico[]>(this.apiUrl);
+        return this.http.get<Viatico[]>(
+            this.apiUrl,
+            { headers: this.getAuthHeaders() }
+        );
     }
 
-    // Obtener viáticos por número de identificación
     getViaticosByIdentificacion(numeroIdentificacion: string): Observable<Viatico[]> {
-        return this.http.get<Viatico[]>(`${this.apiUrl}/consulta/${numeroIdentificacion}`);
+        return this.http.get<Viatico[]>(
+            `${this.apiUrl}/consulta/${numeroIdentificacion}`,
+            { headers: this.getAuthHeaders() }
+        );
     }
 
-    // Obtener viático por ID
     getViaticoById(id: string): Observable<Viatico> {
-        return this.http.get<Viatico>(`${this.apiUrl}/${id}`);
+        return this.http.get<Viatico>(
+            `${this.apiUrl}/${id}`,
+            { headers: this.getAuthHeaders() }
+        );
     }
 
-    // Crear nuevo viático
     createViatico(viatico: CreateViaticoRequest): Observable<ApiResponse> {
-        return this.http.post<ApiResponse>(this.apiUrl, viatico);
+        return this.http.post<ApiResponse>(
+            this.apiUrl,
+            viatico,
+            { headers: this.getAuthHeaders() }
+        );
     }
 
-    // Subir documentos para un viático
     uploadDocumentos(viaticoId: string, file: File): Observable<ApiResponse> {
         const formData = new FormData();
         formData.append('file', file);
         
-        return this.http.post<ApiResponse>(`${this.apiUrl}/${viaticoId}/documentos`, formData);
+        return this.http.post<ApiResponse>(
+            `${this.apiUrl}/${viaticoId}/documentos`,
+            formData,
+            { headers: this.getAuthHeaders() }
+        );
     }
 
     getGraficaMensual(año: number): Observable<GraficaData> {
-        return this.http.get<GraficaData>(`${this.apiUrl}/grafica-mensual/${año}`);
+        return this.http.get<GraficaData>(
+            `${this.apiUrl}/grafica-mensual/${año}`,
+            { headers: this.getAuthHeaders() }
+        );
     }
-
-    // Método auxiliar para manejar errores (puedes expandirlo según necesites)
-    private handleError(error: any): Observable<never> {
-        console.error('An error occurred:', error);
-        throw error;
-    }
-
 }
