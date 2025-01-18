@@ -18,7 +18,6 @@ export class ViaticosService {
 
     constructor(private http: HttpClient) { }
 
-    // Función auxiliar para crear los headers de autenticación
     private getAuthHeaders(): HttpHeaders {
         const credentials = btoa(`${environment.basicAuth.username}:${environment.basicAuth.password}`);
         return new HttpHeaders()

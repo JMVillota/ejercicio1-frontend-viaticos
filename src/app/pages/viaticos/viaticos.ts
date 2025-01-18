@@ -554,7 +554,7 @@ export class ViaticosTableComponent implements OnInit {
     hideNuevoViaticoDialog() {
         this.displayNuevoViaticoDialog = false;
         this.viaticoForm.reset();
-        this.messageService.clear(); // Limpiar mensajes al cerrar
+        this.messageService.clear();
     }
 
     showUploadDialog(viatico: Viatico) {
@@ -569,13 +569,11 @@ export class ViaticosTableComponent implements OnInit {
 
     saveViatico() {
         if (this.viaticoForm.invalid) {
-            // Marcar todos los campos como touched para mostrar validaciones visuales
             Object.keys(this.viaticoForm.controls).forEach(key => {
                 const control = this.viaticoForm.get(key);
                 control?.markAsTouched();
             });
     
-            // Mostrar mensaje de campos requeridos
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Validación',
@@ -584,12 +582,10 @@ export class ViaticosTableComponent implements OnInit {
             });
             return;
         }
-    
-        // Si el formulario es válido, proceder con el guardado
+        
         this.loading = true;
         const formData = this.viaticoForm.value;
     
-        // Formatear fechas
         formData.fechaRegistro = new Date(formData.fechaRegistro).toISOString().split('T')[0];
         formData.fechaInicioViaje = new Date(formData.fechaInicioViaje).toISOString().split('T')[0];
         formData.fechaFinViaje = new Date(formData.fechaFinViaje).toISOString().split('T')[0];
@@ -632,7 +628,6 @@ export class ViaticosTableComponent implements OnInit {
           const zip = new JSZip();
           const contents = await zip.loadAsync(file);
           
-          // Contar archivos PDF
           this.archivosPDF = Object.keys(contents.files).filter(
             filename => filename.toLowerCase().endsWith('.pdf')
           ).length;
