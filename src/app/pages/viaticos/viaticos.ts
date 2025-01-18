@@ -470,32 +470,31 @@ export class ViaticosTableComponent implements OnInit {
         this.minDate.setDate(this.minDate.getDate() - 90);
 
         this.viaticoForm = this.fb.group({
-            numeroIdentificacion: ['', [Validators.required, Validators.minLength(5)]],
-            nombreEmpleado: ['', [Validators.required, Validators.minLength(3)]],
-            fechaRegistro: ['', [
+            numeroIdentificacion: ['', [
                 Validators.required,
-                (control: AbstractControl): ValidationErrors | null => {
-                    const fecha = new Date(control.value);
-                    const hoy = new Date();
-                    const minDate = new Date();
-                    minDate.setDate(minDate.getDate() - 90);
-
-                    if (fecha > hoy) {
-                        return { futureDate: true };
-                    }
-                    if (fecha < minDate) {
-                        return { tooOld: true };
-                    }
-                    return null;
-                }
+                Validators.minLength(5),
+                Validators.pattern('^[0-9]+$')
             ]],
-            motivoViaje: ['', [Validators.required, Validators.minLength(10)]],
+            nombreEmpleado: ['', [
+                Validators.required,
+                Validators.minLength(3),
+                Validators.pattern('^[a-zA-ZñÑáéíóúÁÉÍÓÚ ]+$')
+            ]],
+            fechaRegistro: ['', [Validators.required]],
+            motivoViaje: ['', [
+                Validators.required,
+                Validators.minLength(1)
+            ]],
             clienteProyecto: ['', [Validators.required]],
             fechaInicioViaje: ['', [Validators.required]],
             fechaFinViaje: ['', [Validators.required]],
-            correoAprobador: ['', [Validators.required, Validators.email]]
+            correoAprobador: ['', [
+                Validators.required,
+                Validators.email,
+                Validators.pattern('^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$')
+            ]]
         }, {
-            validators: this.fechaViajeValidator
+            validators: [this.fechaViajeValidator]
         });
     }
 
@@ -555,6 +554,7 @@ export class ViaticosTableComponent implements OnInit {
     hideNuevoViaticoDialog() {
         this.displayNuevoViaticoDialog = false;
         this.viaticoForm.reset();
+        this.messageService.clear(); // Limpiar mensajes al cerrar
     }
 
     showUploadDialog(viatico: Viatico) {
@@ -568,40 +568,54 @@ export class ViaticosTableComponent implements OnInit {
     }
 
     saveViatico() {
-        if (this.viaticoForm.valid) {
-            this.loading = true;
-            const formData = this.viaticoForm.value;
-
-            formData.fechaRegistro = new Date(formData.fechaRegistro).toISOString().split('T')[0];
-            formData.fechaInicioViaje = new Date(formData.fechaInicioViaje).toISOString().split('T')[0];
-            formData.fechaFinViaje = new Date(formData.fechaFinViaje).toISOString().split('T')[0];
-
-            this.viaticosService.createViatico(formData)
-                .subscribe({
-                    next: (response) => {
-                        this.mostrarExito('Viático creado exitosamente');
-                        this.hideNuevoViaticoDialog();
-                        this.cargarViaticos();
-                    },
-                    error: (error) => {
-                        this.mostrarError(error.error.message || 'Error al crear el viático');
-                        this.loading = false;
-                    }
-                });
-        } else {
+        if (this.viaticoForm.invalid) {
+            // Marcar todos los campos como touched para mostrar validaciones visuales
+            Object.keys(this.viaticoForm.controls).forEach(key => {
+                const control = this.viaticoForm.get(key);
+                control?.markAsTouched();
+            });
+    
+            // Mostrar mensaje de campos requeridos
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Validación',
                 detail: 'Por favor complete todos los campos requeridos correctamente',
-                life: 5000
+                life: 3000
             });
-            Object.keys(this.viaticoForm.controls).forEach(key => {
-                const control = this.viaticoForm.get(key);
-                if (control?.invalid) {
-                    control.markAsTouched();
+            return;
+        }
+    
+        // Si el formulario es válido, proceder con el guardado
+        this.loading = true;
+        const formData = this.viaticoForm.value;
+    
+        // Formatear fechas
+        formData.fechaRegistro = new Date(formData.fechaRegistro).toISOString().split('T')[0];
+        formData.fechaInicioViaje = new Date(formData.fechaInicioViaje).toISOString().split('T')[0];
+        formData.fechaFinViaje = new Date(formData.fechaFinViaje).toISOString().split('T')[0];
+    
+        this.viaticosService.createViatico(formData)
+            .subscribe({
+                next: (response) => {
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Éxito',
+                        detail: 'Viático creado correctamente',
+                        life: 3000
+                    });
+                    this.hideNuevoViaticoDialog();
+                    this.cargarViaticos();
+                },
+                error: (error) => {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'Error al crear el viático',
+                        life: 3000
+                    });
+                    this.loading = false;
                 }
             });
-        }
     }
 
     async onFileSelect(event: any) {
