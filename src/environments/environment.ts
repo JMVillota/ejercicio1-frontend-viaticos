@@ -1,8 +1,8 @@
 export const environment = {
-    production: false,
-    apiUrl: 'http://localhost:8080/api',
+    production: true,
+    apiUrl: 'https://charming-illumination-production.up.railway.app/api',
     basicAuth: {
-        username: 'user',
-        password: 'password'
+        username: import.meta.env.VITE_AUTH_USERNAME,
+        password: import.meta.env.VITE_AUTH_PASSWORD
     }
 };
